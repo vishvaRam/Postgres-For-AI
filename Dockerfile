@@ -1,0 +1,59 @@
+FROM postgres:17.2
+
+# Set environment variables
+ENV POSTGRES_VERSION=17
+ENV AGE_VERSION=PG17/v1.6.0-rc0
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    wget \
+    postgresql-server-dev-${POSTGRES_VERSION} \
+    libkrb5-dev \
+    flex \
+    bison \
+    libreadline-dev \
+    zlib1g-dev \
+    cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install pgvector
+RUN cd /tmp && \
+    git clone --branch v0.8.1 https://github.com/pgvector/pgvector.git && \
+    cd pgvector && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf pgvector
+
+# Install Apache AGE
+RUN cd /tmp && \
+    git clone --branch ${AGE_VERSION} https://github.com/apache/age.git && \
+    cd age && \
+    make install && \
+    cd .. && \
+    rm -rf age
+
+# Install pg_cron for scheduling (optional but useful for AI pipelines)
+RUN cd /tmp && \
+    git clone https://github.com/citusdata/pg_cron.git && \
+    cd pg_cron && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf pg_cron
+
+# Install pg_stat_statements for query performance monitoring
+RUN echo "shared_preload_libraries = 'pg_cron,pg_stat_statements'" >> /usr/share/postgresql/postgresql.conf.sample
+
+# Clean up build dependencies to reduce image size
+RUN apt-get purge -y --auto-remove \
+    build-essential \
+    git \
+    wget \
+    postgresql-server-dev-${POSTGRES_VERSION} \
+    cmake
+
+# Expose PostgreSQL port
+EXPOSE 5432

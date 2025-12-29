@@ -1,0 +1,31 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
+    command: >
+      postgres
+      -c shared_preload_libraries='pg_cron,pg_stat_statements'
+      -c cron.database_name='ai'
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+volumes:
+  pgdata:
